@@ -607,6 +607,7 @@
 </ol>
 <h2 id="_2">Решение</h2>
 <h3 id="no1">№1</h3>
+<p>Добавлены celery (для фоновых задач) и redis (как брокер и хранилище результатов).</p>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.poetry.dependencies]</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># ...</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">celery</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;^5.5.2&quot;</span>
@@ -614,6 +615,13 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># ...</span>
 </span></code></pre></div>
 <h3 id="no2">№2</h3>
+<p>Создано Celery-приложение с подключением к Redis.</p>
+<p>Реализована задача parse_url, которая:</p>
+<ul>
+<li>Отправляет запрос к парсеру через HTTP.</li>
+<li>Обрабатывает возможные ошибки.</li>
+<li>Возвращает результат или сообщение об ошибке</li>
+</ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span> <span class="nn">celery</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span> <span class="nn">requests</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
@@ -638,6 +646,18 @@
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="no3">№3</h3>
+<p>Добавлены сервисы</p>
+<p>Redis:</p>
+<ul>
+<li>Защищен паролем.</li>
+<li>Настроен healthcheck.</li>
+<li>Использует том для хранения данных.</li>
+</ul>
+<p>Celery Worker:</p>
+<ul>
+<li>Зависит от Redis и основного приложения.</li>
+<li>Переиспользует образ todo-app с отдельным Dockerfile.celery_worker.</li>
+</ul>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">services</span><span class="p">:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="c1"># ...</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">redis</span><span class="p">:</span>
@@ -683,6 +703,17 @@
 </span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bridge</span>
 </span></code></pre></div>
 <h3 id="no4">№4</h3>
+<p>Добавлены эндпоинты для асинхронного запуска задачи, а также проверки ее статуса.</p>
+<p>POST /parser/parse/start:</p>
+<ul>
+<li>Принимает URL, ставит задачу в очередь Celery.</li>
+<li>Возвращает task_id и статус STARTED.</li>
+</ul>
+<p>GET /parser/parse/result/{task_id}:</p>
+<ul>
+<li>Проверяет статус задачи.</li>
+<li>Возвращает результат при успехе или ошибку при неудаче.</li>
+</ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">AsyncGenerator</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Annotated</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
@@ -726,6 +757,27 @@
 </span><span id="__span-3-41"><a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>        <span class="n">state</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">state</span><span class="p">,</span>
 </span><span id="__span-3-42"><a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a>    <span class="p">)</span>
 </span></code></pre></div>
+<p>Выводы</p>
+<p>Интеграция Celery + Redis:</p>
+<ul>
+<li>Настроена асинхронная обработка задач с использованием очередей.</li>
+<li>Redis выступает как единая точка управления задачами.</li>
+</ul>
+<p>Изоляция сервисов:</p>
+<ul>
+<li>Парсер, Celery Worker и Redis работают в отдельных контейнерах.</li>
+<li>Четкое разделение обязанностей между компонентами.</li>
+</ul>
+<p>Отслеживание состояния задач:</p>
+<ul>
+<li>Клиент может проверять статус выполнения через API.</li>
+<li>Обработка ошибок на всех этапах (постановка в очередь, выполнение).</li>
+</ul>
+<p>Гибкость архитектуры:</p>
+<ul>
+<li>Добавление новых фоновых задач требует минимальных изменений.</li>
+<li>Возможность масштабирования воркеров Celery.</li>
+</ul>
 
 
 

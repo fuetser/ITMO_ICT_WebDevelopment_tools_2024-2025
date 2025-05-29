@@ -511,6 +511,18 @@
 <h2 id="_1">Задание</h2>
 <p>Необходимо добавить в FastAPI приложение ендпоинт, который будет принимать запросы с URL для парсинга от клиента, отправлять запрос парсеру (запущенному в отдельном контейнере) и возвращать ответ с результатом клиенту.</p>
 <h2 id="_2">Решение</h2>
+<p>Этот фрагмент добавляет в FastAPI-приложение прокси-эндпоинт /parser/parse, который:</p>
+<ul>
+<li>Принимает URL от клиента.</li>
+<li>Перенаправляет запрос в отдельный микросервис-парсер (через aiohttp).</li>
+<li>Возвращает результат парсинга (заголовок страницы) или ошибку.</li>
+</ul>
+<p>Ключевые особенности:</p>
+<ul>
+<li>Использует AsyncGenerator для управления HTTP-сессиями.</li>
+<li>Валидация данных через Pydantic (ParseUrlRequest/ParseUrlResponse).</li>
+<li>Гибкая настройка URL парсера через settings.</li>
+</ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">AsyncGenerator</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Annotated</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -548,6 +560,13 @@
 </span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
 </span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>    <span class="k">return</span> <span class="n">parser_schemas</span><span class="o">.</span><span class="n">ParseUrlResponse</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">json</span><span class="p">)</span>
 </span></code></pre></div>
+<p>Чему научились</p>
+<ul>
+<li>Парсер вынесен в отдельный контейнер, что улучшает масштабируемость.</li>
+<li>Работа с aiohttp для запросов между микросервисами.</li>
+<li>Единый формат ошибок для клиента (HTTPException).</li>
+<li>Настройка сетевого взаимодействия сервисов через docker-compose.</li>
+</ul>
 
 
 
